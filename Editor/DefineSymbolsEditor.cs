@@ -4,11 +4,13 @@ using UnityEngine;
 
 namespace Trissiklikk.EditorTools
 {
+
     public sealed class DefineSymbolsEditor : EditorWindow
     {
         private static BuildTargetGroup m_currentBuildTargetGroup = BuildTargetGroup.Standalone;
 
-        private List<string> m_defineSymbols = new List<string>();
+        private DefineSymbolsSaveHandle m_defineSymbolsSaveHandle = new DefineSymbolsSaveHandle();
+        private List<DefineSymbolsData> m_editorDefineSymbols = new List<DefineSymbolsData>();
         private string m_addDefineSymbol = string.Empty;
         private Vector2 m_scrollPosition;
 
@@ -16,6 +18,11 @@ namespace Trissiklikk.EditorTools
         public static void ShowWindow()
         {
             GetWindow(typeof(DefineSymbolsEditor));
+        }
+
+        private void OnEnable()
+        {
+            Refresh();
         }
 
         private void OnGUI()
@@ -32,26 +39,31 @@ namespace Trissiklikk.EditorTools
             {
                 m_scrollPosition = scrollView.scrollPosition;
 
-                for (int i = 0; i < m_defineSymbols.Count; i++)
+                for (int i = 0; i < m_editorDefineSymbols.Count; i++)
                 {
-                    string defineSymbol = m_defineSymbols[i];
+                    DefineSymbolsData defineSymbol = m_editorDefineSymbols[i];
+
+                    Color textColor = defineSymbol.IsEnabled ? Color.green : Color.gray;
+
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        EditorGUILayout.LabelField(defineSymbol, new GUIStyle()
+                        EditorGUILayout.LabelField(defineSymbol.SymbolName, new GUIStyle()
                         {
                             fontStyle = FontStyle.Bold,
                             fontSize = 12,
                             normal = new GUIStyleState()
                             {
-                                textColor = Color.white
+                                textColor = textColor
                             }
                         });
 
+                        defineSymbol.IsEnabled = EditorGUILayout.Toggle(m_editorDefineSymbols[i].IsEnabled);
+
                         GUILayout.FlexibleSpace();
 
-                        if (GUILayout.Button("Remove"))
+                        if (GUILayout.Button("x"))
                         {
-                            Remove(defineSymbol);
+                            Remove(defineSymbol.SymbolName);
                         }
                     }
 
@@ -65,17 +77,16 @@ namespace Trissiklikk.EditorTools
             {
                 m_addDefineSymbol = EditorGUILayout.TextField(m_addDefineSymbol);
 
-                if (GUILayout.Button("Clear"))
+                if (GUILayout.Button("Add"))
                 {
-                    ClearAddDefineSymbol();
+                    Add();
                 }
 
                 GUILayout.FlexibleSpace();
 
-                if (GUILayout.Button("Add"))
+                if (GUILayout.Button("Clear"))
                 {
-                    Refresh();
-                    Add();
+                    ClearAddDefineSymbol();
                 }
 
                 if (GUILayout.Button("Refresh"))
@@ -88,11 +99,12 @@ namespace Trissiklikk.EditorTools
             {
                 if (GUILayout.Button("Apply"))
                 {
-                    Save(m_defineSymbols);
+                    m_defineSymbolsSaveHandle.Save(m_editorDefineSymbols);
+                    m_defineSymbolsSaveHandle.ApplyDataToProject(m_currentBuildTargetGroup, GetEnableData());
                 }
             }
 
-                GUILayout.Space(10);
+            GUILayout.Space(10);
         }
 
         /// <summary>
@@ -106,26 +118,21 @@ namespace Trissiklikk.EditorTools
                 return;
             }
 
-            if (m_defineSymbols.Contains(m_addDefineSymbol))
+            if (m_editorDefineSymbols.Exists(x => x.SymbolName == m_addDefineSymbol))
             {
                 EditorUtility.DisplayDialog("Error", "Define symbol already exists", "OK");
                 return;
             }
 
-            m_defineSymbols.Add(m_addDefineSymbol);
+            DefineSymbolsData defineSymbolsData = new DefineSymbolsData()
+            {
+                SymbolName = m_addDefineSymbol,
+                IsEnabled = true
+            };
+
+            m_editorDefineSymbols.Add(defineSymbolsData);
 
             ClearAddDefineSymbol();
-        }
-
-        /// <summary>
-        /// Refresh current define symbols list.
-        /// </summary>
-        private void Refresh()
-        {
-            string defineSymbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(m_currentBuildTargetGroup);
-
-            m_defineSymbols.Clear();
-            m_defineSymbols.AddRange(defineSymbols.Split(';'));
         }
 
         /// <summary>
@@ -134,21 +141,22 @@ namespace Trissiklikk.EditorTools
         /// <param name="defineSymbol">String value of symbol you need to remove.</param>
         private bool Remove(string defineSymbol)
         {
-            EditorUtility.SetDirty(this);
-
             if (string.IsNullOrEmpty(defineSymbol))
             {
                 EditorUtility.DisplayDialog("Error", "Define symbol cannot be empty", "OK");
                 return false;
             }
 
-            if (!m_defineSymbols.Contains(defineSymbol))
+            bool isAllowed = EditorUtility.DisplayDialog("Warning", "Are you sure you want to remove this define symbol? You need to hit 'Apply' button again when you remove this form list. ", "Yes", "No");
+
+            if (!isAllowed)
             {
-                EditorUtility.DisplayDialog("Error", "Define symbol does not exist", "OK");
                 return false;
             }
 
-            bool isRemoved = m_defineSymbols.Remove(defineSymbol);
+            DefineSymbolsData defineSymbolsData = m_editorDefineSymbols.Find(x => x.SymbolName == defineSymbol);
+
+            bool isRemoved = m_editorDefineSymbols.Remove(defineSymbolsData);
 
             if (!isRemoved)
             {
@@ -156,8 +164,18 @@ namespace Trissiklikk.EditorTools
                 return false;
             }
 
-
             return true;
+        }
+
+        /// <summary>
+        /// Refresh current define symbols list.
+        /// </summary>
+        private void Refresh()
+        {
+            List<DefineSymbolsData> defineSymbols = m_defineSymbolsSaveHandle.Load();
+
+            m_editorDefineSymbols.Clear();
+            m_editorDefineSymbols.AddRange(defineSymbols);
         }
 
         /// <summary>
@@ -171,22 +189,22 @@ namespace Trissiklikk.EditorTools
         }
 
         /// <summary>
-        /// Save define symbols to PlayerSettings.
+        /// This method returns enabled define symbols.
         /// </summary>
-        /// <param name="defineSymbols">List of string you need to save.</param>
-        private void Save(List<string> defineSymbols)
+        /// <returns></returns>
+        private List<DefineSymbolsData> GetEnableData()
         {
-            string defineSymbolsString = string.Join(";", defineSymbols);
-            Save(defineSymbolsString);
-        }
+            List<DefineSymbolsData> enableData = new List<DefineSymbolsData>();
 
-        /// <summary>
-        /// Save define symbols to PlayerSettings.
-        /// </summary>
-        /// <param name="defineSymbols">Sting value rquest join string with ";" </param>
-        private void Save(string defineSymbols)
-        {
-            PlayerSettings.SetScriptingDefineSymbolsForGroup(m_currentBuildTargetGroup, defineSymbols);
+            for (int i = 0; i < m_editorDefineSymbols.Count; i++)
+            {
+                if (m_editorDefineSymbols[i].IsEnabled)
+                {
+                    enableData.Add(m_editorDefineSymbols[i]);
+                }
+            }
+
+            return enableData;
         }
     }
 }
