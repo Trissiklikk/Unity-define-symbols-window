@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace Trissiklikk.EditorTools
 {
-
     public sealed class DefineSymbolsEditor : EditorWindow
     {
         private static BuildTargetGroup m_currentBuildTargetGroup = BuildTargetGroup.Standalone;
