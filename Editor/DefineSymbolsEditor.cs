@@ -2,13 +2,13 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Trissiklikk.EditorTools
+namespace Trissiklikk.EditorTools.DefineSymbolsEditor
 {
     public sealed class DefineSymbolsEditor : EditorWindow
     {
         private static BuildTargetGroup m_currentBuildTargetGroup = BuildTargetGroup.Standalone;
 
-        private DefineSymbolsSaveHandle m_defineSymbolsSaveHandle = new DefineSymbolsSaveHandle();
+        private BaseSaveHandle m_defineSymbolsSaveHandle = new LocalFileSaveHandle();
         private List<DefineSymbolsData> m_editorDefineSymbols = new List<DefineSymbolsData>();
         private string m_addDefineSymbol = string.Empty;
         private Vector2 m_scrollPosition;
@@ -41,6 +41,11 @@ namespace Trissiklikk.EditorTools
                 for (int i = 0; i < m_editorDefineSymbols.Count; i++)
                 {
                     DefineSymbolsData defineSymbol = m_editorDefineSymbols[i];
+
+                    if(defineSymbol == null)
+                    {
+                        continue;
+                    }
 
                     Color textColor = defineSymbol.IsEnabled ? Color.green : Color.gray;
 

@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Trissiklikk.EditorTools
+namespace Trissiklikk.EditorTools.DefineSymbolsEditor
 {
     public class DefineSymbolsData
     {
