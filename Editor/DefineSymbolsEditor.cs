@@ -7,11 +7,13 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
     public sealed class DefineSymbolsEditor : EditorWindow
     {
         private static BuildTargetGroup m_currentBuildTargetGroup = BuildTargetGroup.Standalone;
+        private static SaveType m_targeSaveType = SaveType.LocalFile;
 
-        private BaseSaveHandle m_defineSymbolsSaveHandle = new LocalFileSaveHandle();
+        private BaseSaveHandle m_defineSymbolsSaveHandle;
         private List<DefineSymbolsData> m_editorDefineSymbols = new List<DefineSymbolsData>();
         private string m_addDefineSymbol = string.Empty;
         private Vector2 m_scrollPosition;
+        private SaveType m_currentSaveType;
 
         [MenuItem("Window/Trissiklikk Editor Tools/Define Symbols Window %#F2")]
         public static void ShowWindow()
@@ -24,6 +26,14 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
             Refresh();
         }
 
+        private void OnInspectorUpdate()
+        {
+            if (m_currentSaveType != m_targeSaveType)
+            {
+                Refresh();
+            }
+        }
+
         private void OnGUI()
         {
             GUILayout.Space(10);
@@ -34,6 +44,12 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
                 m_currentBuildTargetGroup = (BuildTargetGroup)EditorGUILayout.EnumPopup(m_currentBuildTargetGroup);
             }
 
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("Save Type");
+                m_targeSaveType = (SaveType)EditorGUILayout.EnumPopup(m_targeSaveType);
+            }
+
             using (var scrollView = new EditorGUILayout.ScrollViewScope(m_scrollPosition, new GUIStyle() { margin = new RectOffset(10, 10, 20, 20) }))
             {
                 m_scrollPosition = scrollView.scrollPosition;
@@ -42,7 +58,7 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
                 {
                     DefineSymbolsData defineSymbol = m_editorDefineSymbols[i];
 
-                    if(defineSymbol == null)
+                    if (defineSymbol == null)
                     {
                         continue;
                     }
@@ -103,12 +119,21 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
             {
                 if (GUILayout.Button("Apply"))
                 {
-                    m_defineSymbolsSaveHandle.Save(m_editorDefineSymbols);
-                    m_defineSymbolsSaveHandle.ApplyDataToProject(m_currentBuildTargetGroup, GetEnableData());
+                    Apply();
                 }
             }
 
             GUILayout.Space(10);
+        }
+
+        /// <summary>
+        /// Apply the data to save process.
+        /// </summary>
+        private void Apply()
+        {
+            VerifiedSaveType();
+            m_defineSymbolsSaveHandle.Save(m_editorDefineSymbols);
+            m_defineSymbolsSaveHandle.ApplyDataToProject(m_currentBuildTargetGroup, GetEnableData());
         }
 
         /// <summary>
@@ -176,10 +201,12 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
         /// </summary>
         private void Refresh()
         {
-            List<DefineSymbolsData> defineSymbols = m_defineSymbolsSaveHandle.Load();
+            m_currentSaveType = m_targeSaveType;
+
+            VerifiedSaveType();
 
             m_editorDefineSymbols.Clear();
-            m_editorDefineSymbols.AddRange(defineSymbols);
+            m_editorDefineSymbols = m_defineSymbolsSaveHandle.Load();
         }
 
         /// <summary>
@@ -209,6 +236,36 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
             }
 
             return enableData;
+        }
+
+        private void VerifiedSaveType()
+        {
+            switch (m_targeSaveType)
+            {
+                case SaveType.LocalFile:
+
+                    if (m_defineSymbolsSaveHandle is LocalFileSaveHandle)
+                    {
+                        return;
+                    }
+
+                    m_defineSymbolsSaveHandle = new LocalFileSaveHandle();
+                    break;
+
+                case SaveType.EditorPrefs:
+
+                    if (m_defineSymbolsSaveHandle is EditorPrefsSaveHandle)
+                    {
+                        return;
+                    }
+
+                    m_defineSymbolsSaveHandle = new EditorPrefsSaveHandle();
+                    break;
+
+                default:
+
+                    throw new System.Exception("Save type not found.");
+            }
         }
     }
 }

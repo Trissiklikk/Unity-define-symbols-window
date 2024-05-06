@@ -1,6 +1,6 @@
 {
   "name": "com.trissiklikk.define-symbols-window-package",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "Define symbols window",
   "description": "This is define symbols editor for enable and disable the symbols.",
   "unity": "2022.3",

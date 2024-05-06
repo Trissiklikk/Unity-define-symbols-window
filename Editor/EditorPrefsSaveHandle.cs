@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using UnityEditor;
 
@@ -27,14 +28,13 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
             string saveKey = GetSaveKey();
             string defineSymbolsString = EditorPrefs.GetString(saveKey, string.Empty);
             List<DefineSymbolsData> result = new List<DefineSymbolsData>();
-
             if (!string.IsNullOrEmpty(defineSymbolsString))
             {
-                string[] defineSymbols = defineSymbolsString.Split(';');
+                JArray jsonArray = JArray.Parse(defineSymbolsString);
 
-                for (int i = 0; i < defineSymbols.Length; i++)
+                for (int i = 0; i < jsonArray.Count; i++)
                 {
-                    DefineSymbolsData data = JsonConvert.DeserializeObject<DefineSymbolsData>(defineSymbols[i]);
+                    DefineSymbolsData data = JsonConvert.DeserializeObject<DefineSymbolsData>(jsonArray[i].ToString());
                     result.Add(data);
                 }
             }
