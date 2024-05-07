@@ -22,8 +22,8 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
 
             for (int i = 0; i < defineSymbolsData.Count; i++)
             {
-                string json = JsonConvert.SerializeObject(defineSymbolsData[i]);
-                writer.WriteLine(json);
+                string symbolName = defineSymbolsData[i].SymbolName;
+                writer.WriteLine(symbolName);
             }
 
             writer.Close();
@@ -42,11 +42,11 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
             }
 
             StreamReader reader = new StreamReader(GetSavePath());
-            string line;
+            string symbolName;
 
-            while ((line = reader.ReadLine()) != null)
+            while ((symbolName = reader.ReadLine()) != null)
             {
-                DefineSymbolsData data = JsonConvert.DeserializeObject<DefineSymbolsData>(line);
+                DefineSymbolsData data = new DefineSymbolsData(symbolName, false);
                 result.Add(data);
             }
 
@@ -57,23 +57,25 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
 
         private void CreateFile()
         {
-            string folderPath = string.Format("{0}/{1}", Application.dataPath, FOLDER_NAME);
+            string folderPath = string.Format("{0}/{1}/{2}", Application.dataPath, "Editor", FOLDER_NAME);
             Directory.CreateDirectory(folderPath);
 
             string savePath = GetSavePath();
-            File.Create(savePath).Close();
+            FileStream file = File.Create(savePath);
+
+            file.Close();
         }
 
         private bool CheckFolderExist()
         {
-            string folderPath = string.Format("{0}/{1}", Application.dataPath, FOLDER_NAME);
+            string folderPath = string.Format("{0}/{1}/{2}", Application.dataPath, "Editor", FOLDER_NAME);
 
             return Directory.Exists(folderPath);
         }
 
         private string GetSavePath()
         {
-            string savePath = string.Format("{0}/{1}/{2}.txt", Application.dataPath, FOLDER_NAME, GetSaveKey());
+            string savePath = string.Format("{0}/{1}/{2}/{3}.txt", Application.dataPath, "Editor", FOLDER_NAME, GetSaveKey());
 
             return savePath;
         }

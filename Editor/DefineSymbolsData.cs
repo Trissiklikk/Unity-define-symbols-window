@@ -8,7 +8,6 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
     {
         private string m_symbolName;
 
-        [JsonProperty("SymbolName")]
         public string SymbolName
         {
             get => m_symbolName;
@@ -17,11 +16,16 @@ namespace Trissiklikk.EditorTools.DefineSymbolsEditor
 
         private bool m_isEnabled;
 
-        [JsonProperty("IsEnabled")]
         public bool IsEnabled
         {
             get => m_isEnabled;
             set => m_isEnabled = value;
+        }
+
+        public DefineSymbolsData(string symbolName, bool isEnabled)
+        {
+            m_symbolName = symbolName;
+            m_isEnabled = isEnabled;
         }
     }
 }
